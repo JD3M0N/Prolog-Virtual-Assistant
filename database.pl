@@ -7,7 +7,8 @@
     inventor/2,
     programming_paradigms/1,
     algorithm_paradigm/2,
-    compare_definitions/3
+    compare_definitions/3,
+    approximate_definition/2
     % Add more predicates here as needed
 ]).
 
@@ -242,4 +243,109 @@ algorithm_paradigm(approximation, declarative).
 compare_definitions(Term1, Term2, Answer) :-
     definition(Term1, Def1),
     definition(Term2, Def2),
-    format(string(Answer), 'Definition of ~w: ~w~nDefinition of ~w: ~w', [Term1, Def1, Term2, Def2]).
+    format(string(Answer), 'Definition of ~w: ~w~n meanwhile the Definition of ~w: ~w', [Term1, Def1, Term2, Def2]).
+
+
+% --------------------------------------------------------------------
+% Section: Aux Functions
+% --------------------------------------------------------------------
+
+% --------------------------------------------------------------------
+% Iterative Levenshtein Distance Function
+% --------------------------------------------------------------------
+% This implementation uses iterative dynamic programming and processes
+% each row (distance vector) to calculate the distance between two strings.
+%
+% The algorithm is based on:
+%
+%   1. Converting the strings to lists of characters.
+%   2. Initializing the base row: [0, 1, 2, ..., M] where M is the length
+%      of the second string.
+%   3. For each character of the first string, update the row using
+%      the formula:
+%
+%         new_row[0] = prev_row[0] + 1.
+%         For each j (1..M):
+%           cost = 0 if the current character of the first string matches
+%                  the corresponding character in the second string, 1 otherwise.
+%           new_row[j] = min( prev_row[j] + 1,       % deletion
+%                             new_row[j-1] + 1,      % insertion
+%                             prev_row[j-1] + cost ).% substitution
+%
+%   4. The final distance is the last element of the last row.
+%
+% --------------------------------------------------------------------
+
+levenshtein_distance(String1, String2, Distance) :-
+    string_chars(String1, L1),
+    string_chars(String2, L2),
+    initial_distance_row(L2, Row0),
+    levenshtein_rows(L1, L2, Row0, FinalRow),
+    last(FinalRow, Distance).
+
+% initial_distance_row(+L2, -Row)
+% Creates the initial row [0, 1, 2, ..., N] where N is the length of L2.
+initial_distance_row(L2, Row) :-
+    length(L2, N),
+    findall(I, between(0, N, I), Row).
+
+% levenshtein_rows(+L1, +L2, +PrevRow, -FinalRow)
+% Processes each character of L1 and updates the distance row.
+levenshtein_rows([], _L2, PrevRow, PrevRow).
+levenshtein_rows([Char|Rest], L2, PrevRow, FinalRow) :-
+    update_row(Char, L2, PrevRow, NewRow),
+    levenshtein_rows(Rest, L2, NewRow, FinalRow).
+
+% update_row(+Char, +L2, +PrevRow, -NewRow)
+% Updates the distance row for a given character of L1.
+update_row(Char, L2, PrevRow, NewRow) :-
+    % The first cell of the new row is PrevRow[0] + 1.
+    PrevRow = [P0|RestPrev],
+    NewFirst is P0 + 1,
+    update_row_aux(Char, L2, RestPrev, P0, NewFirst, RestNewRow),
+    NewRow = [NewFirst | RestNewRow].
+
+% update_row_aux(+Char, +L2, +PrevRowTail, +PrevDiag, +Left, -NewRowTail)
+% Recursively processes each column (character of L2).
+%
+% Parameters:
+%   - Char: current character of the first string.
+%   - L2: list of characters of the second string.
+%   - PrevRowTail: tail of the previous row (corresponds to columns 1..M).
+%   - PrevDiag: element of the previous diagonal (prev_row[j-1]).
+%   - Left: newly calculated value to the left (new_row[j-1]).
+%   - NewRowTail: result (rest of the new row).
+update_row_aux(_Char, [], [], _PrevDiag, _Left, []).
+update_row_aux(Char, [C|Cs], [Top|RestPrev], PrevDiag, Left, [NewVal|RestNewRow]) :-
+    ( Char == C -> Cost = 0 ; Cost = 1 ),
+    Candidate1 is Top + 1,         % Deletion
+    Candidate2 is Left + 1,        % Insertion
+    Candidate3 is PrevDiag + Cost, % Substitution
+    min3(Candidate1, Candidate2, Candidate3, NewVal),
+    update_row_aux(Char, Cs, RestPrev, Top, NewVal, RestNewRow).
+
+% min3(+X, +Y, +Z, -Min)
+% Calculates the minimum of three numbers.
+min3(X, Y, Z, Min) :-
+    Temp is min(X, Y),
+    Min is min(Temp, Z).
+
+%Approximate Distance Function
+
+% approximate_definition(+Query, -Answer)
+% Search the most similar term to Query in the DataBase of definition and return the answer.
+approximate_definition(Query, Answer) :-
+% Get all the terms of the DataBase (keys de definition/2)
+findall(Key, definition(Key, _), Keys),
+% Compute the Levenshtein distance between the query and each term
+findall(Distance-Key,
+        (member(Key, Keys),
+         levenshtein_distance(Query, Key, Distance)),
+        Pairs),
+% Orders the pairs by distance (ascending)
+sort(Pairs, SortedPairs),
+SortedPairs = [MinDistance-BestMatch | _],
+% Defining umbral for the distance
+MinDistance =< 3,
+% Return the answer of the best match
+definition(BestMatch, Answer).

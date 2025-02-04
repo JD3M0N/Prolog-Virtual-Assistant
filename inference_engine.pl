@@ -7,8 +7,21 @@
 % --------------------------------------------------------------------
 
 % Resolve a basic definition query.
-resolve_query(definition(Term, Answer), Answer) :-
-    definition(Term, Answer).
+
+%resolve_query(definition(Term, Answer), Answer) :-
+%    definition(Term, Answer).
+
+
+resolve_query(definition(Query, Answer), Answer) :-
+    (   % First, try to find an exact match for the query
+        definition(Query, ExactAnswer)
+    ->  Answer = ExactAnswer
+    ;   % If no exact match is found, try to find an approximate match
+        approximate_definition(Query, ApproxAnswer)
+    ->  Answer = ApproxAnswer
+    ;   % If no match is found, return a default answer
+        Answer = 'No matching definition found.'
+    ).
 
 % Resolve a basic inventor query.
 resolve_query(inventor(Term, Answer), Answer) :-
