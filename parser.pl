@@ -2,17 +2,17 @@
 :- use_module(library(dcg/basics)).
 
 % Gramática para preguntas del tipo "What is X?" o "What is an X?"
-question(definition(Term, _)) --> [what, is], optional_article, subject(Term).
+question(definition(Term, Answer)) --> [what, is], optional_article, subject(Term), { Answer = _ }.
 
-question(definition(Term, _)) --> ignore_until_specific_word, subject(Term), key_term.
+question(definition(Term, Answer)) --> ignore_until_specific_word, subject(Term), key_term, { Answer = _ }.
 
-question(definition(Term, _)) --> ignore_until_specific_word ,key_term, [of], subject(Term).
+question(definition(Term, Answer)) --> ignore_until_specific_word, key_term, [of], subject(Term), { Answer = _ }.
 
 % Gramática para preguntas sobre inventores: "Who invented X?"
-question(inventor(Term, _)) --> [who, invented], optional_article, subject(Term).
+question(inventor(Term, Answer)) --> [who, invented], optional_article, subject(Term), { Answer = _ }.
 
 % Gramática para paradigmas de programación: "What are the programming paradigms?"
-question(programming_paradigms(_)) --> [what, are, the, programming, paradigms].
+question(programming_paradigms(Answer)) --> [what, are, the, programming, paradigms], { Answer = _ }.
 
 % Permitir artículos opcionales (para manejar "a", "an", "the")
 optional_article --> [a] | [an] | [the] | [].

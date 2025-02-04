@@ -2,17 +2,27 @@
 :- use_module(parser).
 :- use_module(inference_engine).
 
-% Iniciar la interacción con el usuario
 start :-
     write('Welcome to the Virtual Assistant. Type your question:'), nl,
     read_line_to_codes(user_input, Input),
     atom_codes(Atom, Input),
-    split_string(Atom, " ", "", WordsList),  % Dividir entrada en palabras
-    process(WordsList).
+    split_string(Atom, " ", "", WordsList),  % Lista de strings
+    convert_tokens(WordsList, Tokens),        % Convertir a lista de átomos en minúsculas
+    process(Tokens).
 
-% Procesar la entrada del usuario
 process(WordsList) :-
-    parse_query(WordsList, Query),  % Convertir pregunta en consulta interna
-    resolve_query(Query, Answer),   % Buscar respuesta en el motor de inferencia
-    write('Answer: '), write(Answer), nl, nl,
+    (   parse_query(WordsList, Query) -> 
+        (   resolve_query(Query, Answer)
+        ->  write('Answer: '), write(Answer), nl, nl
+        ;   write('Sorry, I do not understand your question.'), nl, nl
+        )
+    ;   write('Sorry, I do not understand your question.'), nl, nl
+    ),
     start.
+    
+% Predicado auxiliar para convertir tokens
+convert_tokens([], []).
+convert_tokens([Str|RestStr], [Atom|RestAtoms]) :-
+    atom_string(Temp, Str),
+    downcase_atom(Temp, Atom),
+    convert_tokens(RestStr, RestAtoms).
