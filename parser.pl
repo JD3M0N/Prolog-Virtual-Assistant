@@ -4,7 +4,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Predicado principal: parse_query/2
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Ahora parse_query/2 espera una lista de códigos (Input) y produce una Query.
+% parse_query/2 espera una lista de códigos (Input) y produce una Query.
 parse_query(InputCodes, Query) :-
     % Convertir los códigos en un átomo
     atom_codes(Atom, InputCodes),
@@ -30,6 +30,7 @@ convert_tokens([Str|RestStr], [Atom|RestAtoms]) :-
 %% Gramática de preguntas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
 % Ejemplo 1: Consulta de definición
 % "What is quantum computing?" se procesará como:
 %   [what, is, quantum, computing] -> definition(quantum_computing, Answer)
@@ -39,6 +40,8 @@ question(definition(Term, Answer)) -->
     subject_sequence(Tokens),
     { atomic_list_concat(Tokens, '_', Term),
       Answer = _ }.
+
+
 
 % Ejemplo 2: Consulta de inventor
 % "Who invented computer?" se procesará como:
@@ -50,12 +53,16 @@ question(inventor(Term, Answer)) -->
     { atomic_list_concat(Tokens, '_', Term),
       Answer = _ }.
 
+
+
 % Ejemplo 3: Consulta sobre paradigmas de programación
 % "What are the programming paradigms?" se procesará como:
 %   [what, are, the, programming, paradigms] -> programming_paradigms(Answer)
 question(programming_paradigms(Answer)) -->
     [what, are, the, programming, paradigms],
     { Answer = _ }.
+
+
 
 % Ejemplo 4: Consulta comparativa de definiciones
 % "compare definitions algorithm and data structure" se procesa como:
@@ -66,7 +73,18 @@ question(compare_definitions(Term1, Term2)) -->
     [and],
     subject_sequence(Tokens2),
     { atomic_list_concat(Tokens1, '_', Term1),
-      atomic_list_concat(Tokens2, '_', Term2) }.
+      atomic_list_concat(Tokens2, '_', Term2) }.     
+
+
+
+question(definition(Term, Answer)) -->
+    ignore_until_specific_word,
+    key_term_def,
+    [of],
+    subject_sequence(Tokens),
+    { atomic_list_concat(Tokens, '_', Term),
+      Answer = _ }.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Auxiliares para la gramática
@@ -78,3 +96,12 @@ subject_sequence([Word|Rest]) --> [Word], subject_sequence(Rest).
 
 % Permite artículos opcionales: a, an, the
 optional_article --> [a] | [an] | [the] | [].
+
+% Regla para ignorar cualquier palabra antes de "subject(Term)"
+ignore_until_specific_word --> [_], ignore_until_specific_word.
+ignore_until_specific_word --> [].  % Caso base: detenerse si ya se encontró el subject
+
+% Terminos unificados de definition
+key_term_def --> [concept].
+key_term_def --> [definition].
+key_term_def --> [meaning].
