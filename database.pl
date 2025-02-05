@@ -9,6 +9,7 @@
     algorithm_paradigm/2,
     compare_definitions/3,
     approximate_definition/2,
+    approximate_definition2/3,
     approximate_inventor/2,
     approximate_inventor2/3
     % Add more predicates here as needed
@@ -401,3 +402,28 @@ SortedPairs = [MinDistance-BestMatch | _],
 MinDistance =< 3,
 % Retrieve the definition for the best match.
 inventor(BestMatch, ApproxAnswer).
+
+
+% approximate_definition2(+Query, -BestMatch, -ApproxAnswer)
+% Finds the definition key most similar to Query and returns the best match along with its definition.
+approximate_definition2(Query, BestMatch, ApproxAnswer) :-
+    % Convert Query to an atom if it's a string.
+    (   string(Query)
+    ->  atom_string(AtomQuery, Query)
+    ;   AtomQuery = Query
+    ),
+    % Get all definition keys.
+    findall(Key, definition(Key, _), Keys),
+    % Compute the Levenshtein distance for each key.
+    findall(Distance-Key,
+            ( member(Key, Keys),
+              levenshtein_distance(AtomQuery, Key, Distance)
+            ),
+            Pairs),
+    % Sort the pairs by distance (lowest distance first).
+    sort(Pairs, SortedPairs),
+    SortedPairs = [MinDistance-BestMatch | _],
+    % Set a threshold (for example, 3).
+    MinDistance =< 3,
+    % Retrieve the definition for the best match.
+    definition(BestMatch, ApproxAnswer).
