@@ -1,5 +1,5 @@
 % inference_engine.pl
-:- module(inference_engine, [resolve_query/2, resolve_query_with_fallback/2]).
+:- module(inference_engine, [resolve_query/2, resolve_query_with_fallback/2, resolve_query_with_fallback2/2]).
 :- use_module(database).  % Load your database.pl
 
 % --------------------------------------------------------------------
@@ -164,7 +164,7 @@ resolve_query(inventor_all(Entity), Inventors) :-
 % Other Functions
 % --------------------------------------------------------------------
 
-% Predicado auxiliar que realiza **únicamente** la búsqueda exacta.
+% Predicate to try to find the exact query 
 exact_definition(Query, Answer) :-
 (   string(Query)
 ->  atom_string(AtomQuery, Query)
@@ -173,16 +173,16 @@ exact_definition(Query, Answer) :-
 definition(AtomQuery, Answer).
 
 % Define split_atom/3 using atomic_list_concat/3
-% Predicado auxiliar: divide un átomo en una lista de partes
+% Predicate function to : divide an atom into a list
 split_atom(Atom, Separator, List) :-
-    atom(Atom),  % Asegurar que es un átomo antes de convertir
+    atom(Atom),  % Making sure it is an atom
     atomic_list_concat(List, Separator, Atom).
 
-% Predicado para resolver una consulta con tolerancia a errores y reducción progresiva
+% Predicate to solve a query with error tolerance and progressive reduction
 resolve_query_with_fallback(Query, Answer) :-
-    ensure_string(Query, QueryString),  % Convertir a string si es necesario
-    split_string(QueryString, "_", "", Parts),  % Separar en lista de strings
-    maplist(atom_string, PartsAtoms, Parts),  % Convertir lista de strings a átomos
+    ensure_string(Query, QueryString),  % Converting into string if needed
+    split_string(QueryString, "_", "", Parts),  % Separating into a list of strings
+    maplist(atom_string, PartsAtoms, Parts),  % Converting the list into atoms
     (   % Primero se intenta encontrar una coincidencia exacta en alguno de los niveles.
         find_exact_match(PartsAtoms, Answer)
     ->  true
@@ -247,3 +247,82 @@ try_subqueries(Words, Answer) :-
 try_subqueries(Words, Answer) :-
     last(Words, LastWord), % Última palabra individual
     resolve_query(definition(LastWord, Answer), Answer).
+
+
+% --------------------------------------------------------------------
+% Predicados auxiliares para Inventors
+% --------------------------------------------------------------------
+
+% Busca una coincidencia exacta para un inventor.
+exact_inventor(Query, Answer) :-
+(   string(Query)
+->  atom_string(AtomQuery, Query)
+;   AtomQuery = Query
+),
+inventor(AtomQuery, Answer).
+
+% Intenta encontrar una coincidencia exacta reduciendo progresivamente la consulta (para inventors).
+find_exact_inventor(Words, Answer) :-
+(   % Intenta con la consulta completa.
+    atomic_list_concat(Words, '_', FullQuery),
+    exact_inventor(FullQuery, Answer)
+)
+;
+(   % Intenta con las tres últimas palabras (si hay al menos 3).
+    length(Words, N), N > 2,
+    append(_, [W1, W2, W3 | _], Words),
+    atomic_list_concat([W1, W2, W3], '_', SubQuery3),
+    exact_inventor(SubQuery3, Answer)
+)
+;
+(   % Intenta con las dos últimas palabras (si hay al menos 2).
+    length(Words, N), N > 1,
+    append(_, [W1, W2 | _], Words),
+    atomic_list_concat([W1, W2], '_', SubQuery2),
+    exact_inventor(SubQuery2, Answer)
+)
+;
+(   % Intenta con la última palabra.
+    last(Words, LastWord),
+    exact_inventor(LastWord, Answer)
+).
+
+% Intenta buscar inventors reduciendo progresivamente la consulta
+try_subqueries_inventor([Word], Answer) :-
+resolve_query(inventor(Word, Answer), Answer),
+Answer \= 'No matching inventor found.', !.
+
+try_subqueries_inventor(Words, Answer) :-
+length(Words, N),
+N > 2,
+append(_, [W1, W2, W3 | _], Words),  % Toma las tres últimas palabras
+atomic_list_concat([W1, W2, W3], '_', SubQuery),
+resolve_query(inventor(SubQuery, Answer), Answer),
+Answer \= 'No matching inventor found.', !.
+
+try_subqueries_inventor(Words, Answer) :-
+length(Words, N),
+N > 1,
+append(_, [W1, W2 | _], Words),  % Toma las dos últimas palabras
+atomic_list_concat([W1, W2], '_', SubQuery),
+resolve_query(inventor(SubQuery, Answer), Answer),
+Answer \= 'No matching inventor found.', !.
+
+try_subqueries_inventor(Words, Answer) :-
+last(Words, LastWord),  % Última palabra individual
+resolve_query(inventor(LastWord, Answer), Answer).
+
+% --------------------------------------------------------------------
+% Nueva función: resolve_query_with_fallback2 para inventors
+% --------------------------------------------------------------------
+
+resolve_query_with_fallback2(Query, Answer) :-
+ensure_string(Query, QueryString),  % Convierte la consulta a string si es necesario.
+split_string(QueryString, "_", "", Parts),  % Separa la cadena usando "_" como separador.
+maplist(atom_string, PartsAtoms, Parts),    % Convierte la lista de strings a átomos.
+(   % Primero se intenta la búsqueda exacta.
+    find_exact_inventor(PartsAtoms, Answer)
+->  true
+;   % Si no hay coincidencia exacta, se procede a la búsqueda reduciendo la consulta.
+    try_subqueries_inventor(PartsAtoms, Answer)
+).
