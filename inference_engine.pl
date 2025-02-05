@@ -164,6 +164,13 @@ resolve_query(inventor_all(Entity), Inventors) :-
 % Other Functions
 % --------------------------------------------------------------------
 
+% Predicado auxiliar que realiza **únicamente** la búsqueda exacta.
+exact_definition(Query, Answer) :-
+(   string(Query)
+->  atom_string(AtomQuery, Query)
+;   AtomQuery = Query
+),
+definition(AtomQuery, Answer).
 
 % Define split_atom/3 using atomic_list_concat/3
 % Predicado auxiliar: divide un átomo en una lista de partes
@@ -176,12 +183,44 @@ resolve_query_with_fallback(Query, Answer) :-
     ensure_string(Query, QueryString),  % Convertir a string si es necesario
     split_string(QueryString, "_", "", Parts),  % Separar en lista de strings
     maplist(atom_string, PartsAtoms, Parts),  % Convertir lista de strings a átomos
-    try_subqueries(PartsAtoms, Answer).
+    (   % Primero se intenta encontrar una coincidencia exacta en alguno de los niveles.
+        find_exact_match(PartsAtoms, Answer)
+    ->  true
+    ;   % Si no hay coincidencia exacta, se procede a la búsqueda aproximada.
+        try_subqueries(PartsAtoms, Answer)
+    ).
+
 
 % Convierte Query a string si es un átomo
 ensure_string(Query, QueryString) :-
     (   string(Query) -> QueryString = Query   % Si ya es string, mantenerlo
     ;   atom(Query) -> atom_string(Query, QueryString)  % Convertir átomo a string
+    ).
+
+% Busca una coincidencia exacta en distintos niveles (completo, últimas 3, 2 y 1 palabra) usando exact_definition/2.
+find_exact_match(Words, Answer) :-
+    (   % Intentar con la consulta completa.
+        atomic_list_concat(Words, '_', FullQuery),
+        exact_definition(FullQuery, Answer)
+    )
+    ;
+    (   % Intentar con las tres últimas palabras (si hay al menos 4 palabras).
+        length(Words, N), N > 2,
+        append(_, [W1, W2, W3 | _], Words),
+        atomic_list_concat([W1, W2, W3], '_', SubQuery3),
+        exact_definition(SubQuery3, Answer)
+    )
+    ;
+    (   % Intentar con las dos últimas palabras (si hay al menos 2).
+        length(Words, N), N > 1,
+        append(_, [W1, W2 | _], Words),
+        atomic_list_concat([W1, W2], '_', SubQuery2),
+        exact_definition(SubQuery2, Answer)
+    )
+    ;
+    (   % Intentar con la última palabra.
+        last(Words, LastWord),
+        exact_definition(LastWord, Answer)
     ).
 
 % Intenta buscar definiciones reduciendo progresivamente la consulta
