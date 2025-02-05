@@ -44,6 +44,7 @@ question(definition(Term, Answer)) -->
 % Variante 1: Subject compuesto por cuatro tokens.
 question(definition(Term, Answer)) -->
     ignore_until_specific_token,
+    [the],
     [Token1, Token2, Token3, Token4],
     key_term_def,
     ignore_until_specific_token,
@@ -53,6 +54,7 @@ question(definition(Term, Answer)) -->
 % Variante 2: Subject compuesto por tres tokens.
 question(definition(Term, Answer)) -->
     ignore_until_specific_token,
+    [the],
     [Token1, Token2, Token3],
     key_term_def,
     ignore_until_specific_token,
@@ -62,6 +64,7 @@ question(definition(Term, Answer)) -->
 % Variante 3: Subject compuesto por dos tokens.
 question(definition(Term, Answer)) -->
     ignore_until_specific_token,
+    [the],
     [Token1, Token2],
     key_term_def,
     ignore_until_specific_token,
@@ -71,6 +74,7 @@ question(definition(Term, Answer)) -->
 % Variante 4: Subject de un solo token.
 question(definition(Term, Answer)) -->
     ignore_until_specific_token,
+    [the],
     [Token],
     key_term_def,
     ignore_until_specific_token,
@@ -128,6 +132,7 @@ question(inventor(Term, Answer)) -->
 % Variante 1
 question(inventor(Term, Answer)) -->
     ignore_until_specific_token,
+    [the],
     [Token1, Token2, Token3, Token4],
     key_term_inv0,
     ignore_until_specific_token,
@@ -136,6 +141,8 @@ question(inventor(Term, Answer)) -->
 
 % Variante 2
 question(inventor(Term, Answer)) -->
+    ignore_until_specific_token,
+    [the],
     [Token1, Token2, Token3],
     key_term_inv0,
     ignore_until_specific_token,
@@ -144,6 +151,8 @@ question(inventor(Term, Answer)) -->
 
 % Variante 3
 question(inventor(Term, Answer)) -->
+    ignore_until_specific_token,
+    [the],
     [Token1, Token2],
     key_term_inv0,
     ignore_until_specific_token,
@@ -152,6 +161,8 @@ question(inventor(Term, Answer)) -->
 
 % Variante 4
 question(inventor(Term, Answer)) -->
+    ignore_until_specific_token,
+    [the],
     [Token1],
     key_term_inv0,
     ignore_until_specific_token,
@@ -174,6 +185,7 @@ question(programming_paradigms(Answer)) -->
 %%%%%%%%%
 
 question(compare_definitions(Term1, Term2)) -->
+    ignore_until_specific_token,
     key_term_cd,
     subject_sequence(Tokens1),
     [and],
@@ -216,3 +228,4 @@ key_term_inv0 --> [made].
 key_term_cd --> [compare, definitions].
 key_term_cd --> [compare].
 key_term_cd --> [comparison, between].
+key_term_cd --> [compare, between].
