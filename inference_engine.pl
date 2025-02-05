@@ -11,21 +11,72 @@
 %resolve_query(definition(Term, Answer), Answer) :-
 %    definition(Term, Answer).
 
-
 resolve_query(definition(Query, Answer), Answer) :-
-    (   % First, try to find an exact match for the query
-        definition(Query, ExactAnswer)
+    (   % Convert Query to an atom if it's a string
+        (   string(Query)
+        ->  atom_string(AtomQuery, Query)
+        ;   AtomQuery = Query
+        ),
+        % First, try to find an exact match for the converted query
+        definition(AtomQuery, ExactAnswer)
     ->  Answer = ExactAnswer
-    ;   % If no exact match is found, try to find an approximate match
-        approximate_definition(Query, ApproxAnswer)
-    ->  Answer = ApproxAnswer
+    ;   % If no exact match is found, try to find an approximate match using the atom version
+        (   string(Query)
+        ->  atom_string(AtomQuery, Query)
+        ;   AtomQuery = Query
+        ),
+        approximate_definition(AtomQuery, ApproxAnswer)
+    ->  format(atom(Answer),
+           'No exact match found, but perhaps you meant "~w" which is: ~w',
+           [AtomQuery, ApproxAnswer])
     ;   % If no match is found, return a default answer
         Answer = 'No matching definition found.'
     ).
 
+
 % Resolve a basic inventor query.
-resolve_query(inventor(Term, Answer), Answer) :-
-    inventor(Term, Answer).
+
+% resolve_query(inventor(Term, Answer), Answer) :-
+    % inventor(Term, Answer).
+
+% resolve_query(inventor(Query, Answer), Answer) :-
+%     % Convert Query to an atom if it's a string.
+%     (   string(Query)
+%     ->  atom_string(AtomQuery, Query)
+%     ;   AtomQuery = Query
+%     ),
+%     (   % First, try to find an exact match.
+%         inventor(AtomQuery, ExactAnswer)
+%     ->  Answer = ExactAnswer
+%     ;   % If no exact match is found, try to find an approximate match.
+%         approximate_inventor(AtomQuery, ApproxAnswer)
+%     ->  format(atom(Answer),
+%            'No exact match found for inventor, but perhaps you meant "~w" which is: ~w',
+%            [AtomQuery, ApproxAnswer])
+%     ;   % If no match is found, return a default answer.
+%         Answer = 'No matching inventor found.'
+%     ).
+
+
+% Resolve a basic inventor query.
+resolve_query(inventor(Query, Answer), Answer) :-
+    % Convert Query to an atom if it is a string.
+    (   string(Query)
+    ->  atom_string(AtomQuery, Query)
+    ;   AtomQuery = Query
+    ),
+    (   % First, try to find an exact match.
+        inventor(AtomQuery, ExactAnswer)
+    ->  Answer = ExactAnswer
+    ;   % If no exact match is found, try to find an approximate match.
+        approximate_inventor2(AtomQuery, BestMatch, ApproxAnswer)
+    ->  format(atom(Answer),
+           'No exact match found for inventor, but perhaps you meant "~w" which is: ~w',
+           [BestMatch, ApproxAnswer])
+    ;   % If no match is found, return a default answer.
+        Answer = 'No matching inventor found.'
+    ).
+
 
 % Resolve a query for programming paradigms.
 resolve_query(programming_paradigms(Paradigms), Paradigms) :-

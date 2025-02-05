@@ -8,7 +8,9 @@
     programming_paradigms/1,
     algorithm_paradigm/2,
     compare_definitions/3,
-    approximate_definition/2
+    approximate_definition/2,
+    approximate_inventor/2,
+    approximate_inventor2/3
     % Add more predicates here as needed
 ]).
 
@@ -349,3 +351,53 @@ SortedPairs = [MinDistance-BestMatch | _],
 MinDistance =< 3,
 % Return the answer of the best match
 definition(BestMatch, Answer).
+
+
+% approximate_inventor(+Query, -Answer)
+% Finds the inventor key in the database that is most similar to Query (using Levenshtein distance)
+% and returns its associated answer.
+approximate_inventor(Query, Answer) :-
+    % Convert Query to an atom if it's a string.
+    (   string(Query)
+    ->  atom_string(AtomQuery, Query)
+    ;   AtomQuery = Query
+    ),
+    % Gather all inventor keys.
+    findall(Key, inventor(Key, _), Keys),
+    % Compute the Levenshtein distance for each key.
+    findall(Distance-Key,
+            ( member(Key, Keys),
+              levenshtein_distance(AtomQuery, Key, Distance)
+            ),
+            Pairs),
+    % Sort the pairs by distance (lowest distance first).
+    sort(Pairs, SortedPairs),
+    SortedPairs = [MinDistance-BestMatch | _],
+    % Use a threshold (e.g., 3).
+    MinDistance =< 3,
+    % Return the inventor definition for the best match.
+    inventor(BestMatch, Answer).
+
+
+% approximate_inventor2(+Query, -BestMatch, -ApproxAnswer)
+% Finds the inventor key most similar to Query and returns the best match along with its definition.
+approximate_inventor2(Query, BestMatch, ApproxAnswer) :-
+(   string(Query)
+->  atom_string(AtomQuery, Query)
+;   AtomQuery = Query
+),
+% Get all inventor keys.
+findall(Key, inventor(Key, _), Keys),
+% Compute the Levenshtein distance for each key.
+findall(Distance-Key,
+        ( member(Key, Keys),
+          levenshtein_distance(AtomQuery, Key, Distance)
+        ),
+        Pairs),
+% Sort the pairs by distance (lowest distance first).
+sort(Pairs, SortedPairs),
+SortedPairs = [MinDistance-BestMatch | _],
+% Set a threshold (for example, 3).
+MinDistance =< 3,
+% Retrieve the definition for the best match.
+inventor(BestMatch, ApproxAnswer).
