@@ -1,5 +1,7 @@
 :- module(parser, [parse_query/2]).
 :- use_module(library(dcg/basics)).
+:- use_module(database, [definition/2]).
+:- use_module(library(pcre)).  % Para usar re_replace/4
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Predicado principal: parse_query/2
@@ -8,10 +10,8 @@
 parse_query(InputCodes, Query) :-
     % Convertir los códigos en un átomo
     atom_codes(Atom, InputCodes),
-    % Separar el átomo en una lista de strings.
-    % El primer argumento " " indica que separamos por espacios.
-    % El tercer argumento ".,?!¡¿" indica los caracteres que se deben eliminar (paddings).
-    split_string(Atom, " ", ".,?!¡¿", WordsList),
+    re_replace("[\\.,\\?!¡'¿]" / g, "", Atom, CleanAtom),
+    split_string(CleanAtom, " ", "", WordsList),
     % Convertir cada string a un átomo en minúsculas
     convert_tokens(WordsList, Tokens),
     % Aplicar la gramática sobre la lista de tokens
@@ -30,22 +30,89 @@ convert_tokens([Str|RestStr], [Atom|RestAtoms]) :-
 %% Gramática de preguntas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% DEFINITION
+%%%%%%%%%%%%
 
-% Ejemplo 1: Consulta de definición
-% "What is quantum computing?" se procesará como:
-%   [what, is, quantum, computing] -> definition(quantum_computing, Answer)
+% Cuando aparece la palabra clave de definicion al principio
 question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    key_term_def,
+    [of],
+    subject_sequence(Tokens),
+    { atomic_list_concat(Tokens, '_', Term),
+      Answer = _ }.
+
+% Variante 1: Subject compuesto por cuatro tokens.
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    [Token1, Token2, Token3, Token4],
+    key_term_def,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1, Token2, Token3, Token4], '_', Candidate),
+      definition_exists(Candidate),  % Verifica que el candidato exista en la base de datos.
+      Term = Candidate,
+      Answer = _ }.
+
+% Variante 2: Subject compuesto por tres tokens.
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    [Token1, Token2, Token3],
+    key_term_def,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1, Token2, Token3], '_', Candidate),
+      definition_exists(Candidate),  % Verifica que el candidato exista en la base de datos.
+      Term = Candidate,
+      Answer = _ }.      
+
+% Variante 3: Subject compuesto por dos tokens.
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    [Token1, Token2],
+    key_term_def,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1, Token2], '_', Candidate),
+      definition_exists(Candidate),  % Verifica que el candidato exista en la base de datos.
+      Term = Candidate,
+      Answer = _ }.
+
+% Variante 4: Subject de un solo token.
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    [Token],
+    key_term_def,
+    ignore_until_specific_token,
+    { definition_exists(Token),
+      Term = Token,
+      Answer = _ }.
+
+% Cuando aparece means al principio
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    [means],
+    subject_sequence(Tokens),
+    { atomic_list_concat(Tokens, '_', Term),
+      Answer = _ }.            
+
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
     [what, is],
     optional_article,
     subject_sequence(Tokens),
     { atomic_list_concat(Tokens, '_', Term),
       Answer = _ }.
 
+question(definition(Term, Answer)) -->
+    ignore_until_specific_token,
+    [whats],
+    optional_article,
+    subject_sequence(Tokens),
+    { atomic_list_concat(Tokens, '_', Term),
+      Answer = _ }.
 
 
-% Ejemplo 2: Consulta de inventor
-% "Who invented computer?" se procesará como:
-%   [who, invented, computer] -> inventor(computer, Answer)
+% INVENTOR
+%%%%%%%%%%
+
 question(inventor(Term, Answer)) -->
     [who, invented],
     optional_article,
@@ -55,18 +122,18 @@ question(inventor(Term, Answer)) -->
 
 
 
-% Ejemplo 3: Consulta sobre paradigmas de programación
-% "What are the programming paradigms?" se procesará como:
-%   [what, are, the, programming, paradigms] -> programming_paradigms(Answer)
+% PARADIGMS
+%%%%%%%%%%%
+
 question(programming_paradigms(Answer)) -->
     [what, are, the, programming, paradigms],
     { Answer = _ }.
 
 
 
-% Ejemplo 4: Consulta comparativa de definiciones
-% "compare definitions algorithm and data structure" se procesa como:
-%   [compare, definitions, algorithm, and, data, structure] -> compare_definitions(algorithm, data_structure)
+% COMPARE
+%%%%%%%%%
+
 question(compare_definitions(Term1, Term2)) -->
     [compare, definitions],
     subject_sequence(Tokens1),
@@ -74,16 +141,6 @@ question(compare_definitions(Term1, Term2)) -->
     subject_sequence(Tokens2),
     { atomic_list_concat(Tokens1, '_', Term1),
       atomic_list_concat(Tokens2, '_', Term2) }.     
-
-
-
-question(definition(Term, Answer)) -->
-    ignore_until_specific_word,
-    key_term_def,
-    [of],
-    subject_sequence(Tokens),
-    { atomic_list_concat(Tokens, '_', Term),
-      Answer = _ }.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -97,11 +154,16 @@ subject_sequence([Word|Rest]) --> [Word], subject_sequence(Rest).
 % Permite artículos opcionales: a, an, the
 optional_article --> [a] | [an] | [the] | [].
 
-% Regla para ignorar cualquier palabra antes de "subject(Term)"
-ignore_until_specific_word --> [_], ignore_until_specific_word.
-ignore_until_specific_word --> [].  % Caso base: detenerse si ya se encontró el subject
+% Regla para ignorar tokens hasta encontrar uno especifico
+ignore_until_specific_token --> [_], ignore_until_specific_token.
+ignore_until_specific_token --> [].  % Caso base: detenerse si ya se encontró el subject
+
+% Verifica si existe una cláusula definition(Term, _) en la base de datos.
+definition_exists(Term) :-
+    definition(Term, _), !.
 
 % Terminos unificados de definition
 key_term_def --> [concept].
 key_term_def --> [definition].
 key_term_def --> [meaning].
+key_term_def --> [means].
