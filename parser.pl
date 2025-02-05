@@ -1,6 +1,5 @@
 :- module(parser, [parse_query/2]).
 :- use_module(library(dcg/basics)).
-:- use_module(database, [definition/2]).
 :- use_module(library(pcre)).  % Para usar re_replace/4
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -48,9 +47,7 @@ question(definition(Term, Answer)) -->
     [Token1, Token2, Token3, Token4],
     key_term_def,
     ignore_until_specific_token,
-    { atomic_list_concat([Token1, Token2, Token3, Token4], '_', Candidate),
-      definition_exists(Candidate),  % Verifica que el candidato exista en la base de datos.
-      Term = Candidate,
+    { atomic_list_concat([Token1, Token2, Token3, Token4], '_', Term),
       Answer = _ }.
 
 % Variante 2: Subject compuesto por tres tokens.
@@ -59,9 +56,7 @@ question(definition(Term, Answer)) -->
     [Token1, Token2, Token3],
     key_term_def,
     ignore_until_specific_token,
-    { atomic_list_concat([Token1, Token2, Token3], '_', Candidate),
-      definition_exists(Candidate),  % Verifica que el candidato exista en la base de datos.
-      Term = Candidate,
+    { atomic_list_concat([Token1, Token2, Token3], '_', Term),
       Answer = _ }.      
 
 % Variante 3: Subject compuesto por dos tokens.
@@ -70,9 +65,7 @@ question(definition(Term, Answer)) -->
     [Token1, Token2],
     key_term_def,
     ignore_until_specific_token,
-    { atomic_list_concat([Token1, Token2], '_', Candidate),
-      definition_exists(Candidate),  % Verifica que el candidato exista en la base de datos.
-      Term = Candidate,
+    { atomic_list_concat([Token1, Token2], '_', Term),
       Answer = _ }.
 
 % Variante 4: Subject de un solo token.
@@ -81,8 +74,7 @@ question(definition(Term, Answer)) -->
     [Token],
     key_term_def,
     ignore_until_specific_token,
-    { definition_exists(Token),
-      Term = Token,
+    { atomic_list_concat([Token], '_', Term),
       Answer = _ }.
 
 % Cuando aparece means al principio
@@ -93,6 +85,7 @@ question(definition(Term, Answer)) -->
     { atomic_list_concat(Tokens, '_', Term),
       Answer = _ }.            
 
+% Pregunta solo con what is 
 question(definition(Term, Answer)) -->
     ignore_until_specific_token,
     [what, is],
@@ -101,6 +94,7 @@ question(definition(Term, Answer)) -->
     { atomic_list_concat(Tokens, '_', Term),
       Answer = _ }.
 
+% Pregunta solo con whats
 question(definition(Term, Answer)) -->
     ignore_until_specific_token,
     [whats],
@@ -113,12 +107,56 @@ question(definition(Term, Answer)) -->
 % INVENTOR
 %%%%%%%%%%
 
+% Cuando aparece la palabra clave de inventor al principio
 question(inventor(Term, Answer)) -->
-    [who, invented],
+    ignore_until_specific_token,
+    key_term_inv0,
     optional_article,
     subject_sequence(Tokens),
     { atomic_list_concat(Tokens, '_', Term),
       Answer = _ }.
+
+question(inventor(Term, Answer)) -->
+    ignore_until_specific_token,
+    key_term_inv0,
+    [of],
+    optional_article,
+    subject_sequence(Tokens),
+    { atomic_list_concat(Tokens, '_', Term),
+      Answer = _ }.      
+
+% Variante 1
+question(inventor(Term, Answer)) -->
+    ignore_until_specific_token,
+    [Token1, Token2, Token3, Token4],
+    key_term_inv0,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1, Token2, Token3, Token4], '_', Term),
+      Answer = _ }.      
+
+% Variante 2
+question(inventor(Term, Answer)) -->
+    [Token1, Token2, Token3],
+    key_term_inv0,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1, Token2, Token3], '_', Term),
+      Answer = _ }.
+
+% Variante 3
+question(inventor(Term, Answer)) -->
+    [Token1, Token2],
+    key_term_inv0,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1, Token2], '_', Term),
+      Answer = _ }.      
+
+% Variante 4
+question(inventor(Term, Answer)) -->
+    [Token1],
+    key_term_inv0,
+    ignore_until_specific_token,
+    { atomic_list_concat([Token1], '_', Term),
+      Answer = _ }.      
 
 
 
@@ -126,7 +164,8 @@ question(inventor(Term, Answer)) -->
 %%%%%%%%%%%
 
 question(programming_paradigms(Answer)) -->
-    [what, are, the, programming, paradigms],
+    ignore_until_specific_token,
+    [programming, paradigms],
     { Answer = _ }.
 
 
@@ -135,7 +174,7 @@ question(programming_paradigms(Answer)) -->
 %%%%%%%%%
 
 question(compare_definitions(Term1, Term2)) -->
-    [compare, definitions],
+    key_term_cd,
     subject_sequence(Tokens1),
     [and],
     subject_sequence(Tokens2),
@@ -158,12 +197,22 @@ optional_article --> [a] | [an] | [the] | [].
 ignore_until_specific_token --> [_], ignore_until_specific_token.
 ignore_until_specific_token --> [].  % Caso base: detenerse si ya se encontró el subject
 
-% Verifica si existe una cláusula definition(Term, _) en la base de datos.
-definition_exists(Term) :-
-    definition(Term, _), !.
 
 % Terminos unificados de definition
 key_term_def --> [concept].
 key_term_def --> [definition].
 key_term_def --> [meaning].
 key_term_def --> [means].
+
+% Terminos unificados de inventor
+key_term_inv0 --> [invented].   
+key_term_inv0 --> [created].
+key_term_inv0 --> [discovered].
+key_term_inv0 --> [creator].
+key_term_inv0 --> [inventor].
+key_term_inv0 --> [made].
+
+% Unificados de compare definitions
+key_term_cd --> [compare, definitions].
+key_term_cd --> [compare].
+key_term_cd --> [comparison, between].
