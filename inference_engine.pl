@@ -183,47 +183,47 @@ resolve_query_with_fallback(Query, Answer) :-
     ensure_string(Query, QueryString),  % Converting into string if needed
     split_string(QueryString, "_", "", Parts),  % Separating into a list of strings
     maplist(atom_string, PartsAtoms, Parts),  % Converting the list into atoms
-    (   % Primero se intenta encontrar una coincidencia exacta en alguno de los niveles.
+    (   % First, try to find an exact match at any level.
         find_exact_match(PartsAtoms, Answer)
     ->  true
-    ;   % Si no hay coincidencia exacta, se procede a la búsqueda aproximada.
+    ;   % If no exact match is found, proceed to approximate search.
         try_subqueries(PartsAtoms, Answer)
     ).
 
 
-% Convierte Query a string si es un átomo
+% Convert Query to string if it is an atom
 ensure_string(Query, QueryString) :-
-    (   string(Query) -> QueryString = Query   % Si ya es string, mantenerlo
-    ;   atom(Query) -> atom_string(Query, QueryString)  % Convertir átomo a string
+    (   string(Query) -> QueryString = Query   % If it is already a string, keep it
+    ;   atom(Query) -> atom_string(Query, QueryString)  % Convert atom to string
     ).
 
-% Busca una coincidencia exacta en distintos niveles (completo, últimas 3, 2 y 1 palabra) usando exact_definition/2.
+% Search for an exact match at different levels (complete, last 3, 2, and 1 word) using exact_definition/2.
 find_exact_match(Words, Answer) :-
-    (   % Intentar con la consulta completa.
+    (   % Try with the complete query.
         atomic_list_concat(Words, '_', FullQuery),
         exact_definition(FullQuery, Answer)
     )
     ;
-    (   % Intentar con las tres últimas palabras (si hay al menos 4 palabras).
+    (   % Try with the last three words (if there are at least 4 words).
         length(Words, N), N > 2,
         append(_, [W1, W2, W3 | _], Words),
         atomic_list_concat([W1, W2, W3], '_', SubQuery3),
         exact_definition(SubQuery3, Answer)
     )
     ;
-    (   % Intentar con las dos últimas palabras (si hay al menos 2).
+    (   % Try with the last two words (if there are at least 2).
         length(Words, N), N > 1,
         append(_, [W1, W2 | _], Words),
         atomic_list_concat([W1, W2], '_', SubQuery2),
         exact_definition(SubQuery2, Answer)
     )
     ;
-    (   % Intentar con la última palabra.
+    (   % Try with the last word.
         last(Words, LastWord),
         exact_definition(LastWord, Answer)
     ).
 
-% Intenta buscar definiciones reduciendo progresivamente la consulta
+% Try to find definitions by progressively reducing the query
 try_subqueries([Word], Answer) :-
     resolve_query(definition(Word, Answer), Answer),
     Answer \= 'No matching definition found.', !.
@@ -231,7 +231,7 @@ try_subqueries([Word], Answer) :-
 try_subqueries(Words, Answer) :-
     length(Words, N),
     N > 2,
-    append(_, [W1, W2, W3 | _], Words), % Toma las tres últimas palabras
+    append(_, [W1, W2, W3 | _], Words), % Take the last three words
     atomic_list_concat([W1, W2, W3], '_', SubQuery),
     resolve_query(definition(SubQuery, Answer), Answer),
     Answer \= 'No matching definition found.', !.
@@ -239,21 +239,21 @@ try_subqueries(Words, Answer) :-
 try_subqueries(Words, Answer) :-
     length(Words, N),
     N > 1,
-    append(_, [W1, W2 | _], Words), % Toma las dos últimas palabras
+    append(_, [W1, W2 | _], Words), % Take the last two words
     atomic_list_concat([W1, W2], '_', SubQuery),
     resolve_query(definition(SubQuery, Answer), Answer),
     Answer \= 'No matching definition found.', !.
 
 try_subqueries(Words, Answer) :-
-    last(Words, LastWord), % Última palabra individual
+    last(Words, LastWord), % Last individual word
     resolve_query(definition(LastWord, Answer), Answer).
 
 
 % --------------------------------------------------------------------
-% Predicados auxiliares para Inventors
+% Auxiliary predicates for Inventors
 % --------------------------------------------------------------------
 
-% Busca una coincidencia exacta para un inventor.
+% Search for an exact match for an inventor.
 exact_inventor(Query, Answer) :-
 (   string(Query)
 ->  atom_string(AtomQuery, Query)
@@ -261,33 +261,33 @@ exact_inventor(Query, Answer) :-
 ),
 inventor(AtomQuery, Answer).
 
-% Intenta encontrar una coincidencia exacta reduciendo progresivamente la consulta (para inventors).
+% Try to find an exact match by progressively reducing the query (for inventors).
 find_exact_inventor(Words, Answer) :-
-(   % Intenta con la consulta completa.
+(   % Try with the complete query.
     atomic_list_concat(Words, '_', FullQuery),
     exact_inventor(FullQuery, Answer)
 )
 ;
-(   % Intenta con las tres últimas palabras (si hay al menos 3).
+(   % Try with the last three words (if there are at least 3).
     length(Words, N), N > 2,
     append(_, [W1, W2, W3 | _], Words),
     atomic_list_concat([W1, W2, W3], '_', SubQuery3),
     exact_inventor(SubQuery3, Answer)
 )
 ;
-(   % Intenta con las dos últimas palabras (si hay al menos 2).
+(   % Try with the last two words (if there are at least 2).
     length(Words, N), N > 1,
     append(_, [W1, W2 | _], Words),
     atomic_list_concat([W1, W2], '_', SubQuery2),
     exact_inventor(SubQuery2, Answer)
 )
 ;
-(   % Intenta con la última palabra.
+(   % Try with the last word.
     last(Words, LastWord),
     exact_inventor(LastWord, Answer)
 ).
 
-% Intenta buscar inventors reduciendo progresivamente la consulta
+% Try to find inventors by progressively reducing the query
 try_subqueries_inventor([Word], Answer) :-
 resolve_query(inventor(Word, Answer), Answer),
 Answer \= 'No matching inventor found.', !.
@@ -295,7 +295,7 @@ Answer \= 'No matching inventor found.', !.
 try_subqueries_inventor(Words, Answer) :-
 length(Words, N),
 N > 2,
-append(_, [W1, W2, W3 | _], Words),  % Toma las tres últimas palabras
+append(_, [W1, W2, W3 | _], Words),  % Take the last three words
 atomic_list_concat([W1, W2, W3], '_', SubQuery),
 resolve_query(inventor(SubQuery, Answer), Answer),
 Answer \= 'No matching inventor found.', !.
@@ -303,26 +303,28 @@ Answer \= 'No matching inventor found.', !.
 try_subqueries_inventor(Words, Answer) :-
 length(Words, N),
 N > 1,
-append(_, [W1, W2 | _], Words),  % Toma las dos últimas palabras
+append(_, [W1, W2 | _], Words),  % Take the last two words
 atomic_list_concat([W1, W2], '_', SubQuery),
 resolve_query(inventor(SubQuery, Answer), Answer),
 Answer \= 'No matching inventor found.', !.
 
 try_subqueries_inventor(Words, Answer) :-
-last(Words, LastWord),  % Última palabra individual
+last(Words, LastWord),  % Last individual word
 resolve_query(inventor(LastWord, Answer), Answer).
 
 % --------------------------------------------------------------------
-% Nueva función: resolve_query_with_fallback2 para inventors
+% New function: resolve_query_with_fallback2 for inventors
 % --------------------------------------------------------------------
 
 resolve_query_with_fallback2(Query, Answer) :-
-ensure_string(Query, QueryString),  % Convierte la consulta a string si es necesario.
-split_string(QueryString, "_", "", Parts),  % Separa la cadena usando "_" como separador.
-maplist(atom_string, PartsAtoms, Parts),    % Convierte la lista de strings a átomos.
-(   % Primero se intenta la búsqueda exacta.
+ensure_string(Query, QueryString),  % Convert the query to string if necessary.
+split_string(QueryString, "_", "", Parts),  % Split the string using "_" as a separator.
+maplist(atom_string, PartsAtoms, Parts),    % Convert the list of strings to atoms.
+(   
+    % First we try finding the exact query
     find_exact_inventor(PartsAtoms, Answer)
 ->  true
-;   % Si no hay coincidencia exacta, se procede a la búsqueda reduciendo la consulta.
+;   
+    % If there is no exact match, we try to reduce the query
     try_subqueries_inventor(PartsAtoms, Answer)
 ).
